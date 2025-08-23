@@ -1,23 +1,30 @@
 {
-  "name": "effect-vite-app",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "node server.ts",
-    "build": "npm run build:client && npm run build:server",
-    "build:client": "vite build --outDir dist/client",
-    "build:server": "vite build --ssr src/entry-server.ts --outDir dist/server",
-    "start": "PORT=4173 NODE_ENV=production node server.ts"
-  },
-  "devDependencies": {
-    "@types/node": "^24.3.0",
-    "typescript": "~5.8.3",
-    "vite": "^7.1.2"
-  },
-  "dependencies": {
-    "@effect/platform": "^0.90.5",
-    "@effect/platform-node": "^0.96.0",
-    "effect": "^3.17.8"
-  }
+	"name": "effect-vite-app",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"build": "npm run build:client && npm run build:server",
+		"build:client": "vite build",
+		"build:server": "vite build --config ./vite.server.config.ts",
+		"check": "biome check --write",
+		"dev": "node src/lib/server.ts",
+		"format": "biome format --write",
+		"start": "PORT=4173 NODE_ENV=production node src/lib/server.ts"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.2.0",
+		"@types/node": "^24.3.0",
+		"typescript": "~5.8.3",
+		"vite": "^7.1.2"
+	},
+	"dependencies": {
+		"@effect/platform": "^0.90.5",
+		"@effect/platform-node": "^0.96.0",
+		"@preact/signals": "^2.3.1",
+		"effect": "^3.17.8",
+		"preact": "^10.27.1",
+		"preact-render-to-string": "^6.6.1",
+		"urlpattern-polyfill": "^10.1.0"
+	}
 }
