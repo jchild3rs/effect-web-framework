@@ -1,6 +1,7 @@
 import type { ManifestChunk } from "vite";
+import { templateBodyToken, templateHeadToken } from "./config.ts";
 
-export function html(
+export function document(
 	isDev: boolean,
 	manifest?: typeof import("../../dist/client/.vite/manifest.json"),
 	routeEntry?: ManifestChunk,
@@ -11,8 +12,7 @@ export function html(
 		: ``;
 
 	const devScript = isDev
-		? `<script type="module" src="/src/entry-client.tsx"></script>
-        <script type="module" src="/node_modules/preact/devtools"></script>`
+		? `<script type="module" src="/src/entry-client.tsx"></script>`
 		: ``;
 
 	const mainEntry = manifest?.["src/entry-client.tsx"];
@@ -35,19 +35,20 @@ export function html(
 
 	return `<!doctype html>
 <html lang="en">
-	<head>
-		<!--app-head-->
-		<meta charset="UTF-8" />
-		${devStyles}
-		${globalStyles}
-		${routeStyles}
-	</head>
-	<body>
-		<div id="app" style="display: contents">
-			<!--app-body-->
-		</div>
-		${devScript}
-		${globalScript}
-		${routeScript}	</body>
+<head>
+  ${isDev ? '<script type="module" src="/node_modules/preact/devtools"></script>' : ""}
+  ${templateHeadToken}
+  <meta charset="UTF-8" />
+  ${devStyles}
+  ${globalStyles}
+  ${routeStyles}
+</head>
+<body>
+  <div id="app" style="display: contents">${templateBodyToken}</div>
+
+  ${devScript}
+  ${globalScript}
+  ${routeScript}
+</body>
 </html>`;
 }

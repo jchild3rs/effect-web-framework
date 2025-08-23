@@ -2,7 +2,11 @@ import { HttpServerRequest, HttpServerResponse } from "@effect/platform";
 import { Effect, type Option } from "effect";
 import { Fragment } from "preact";
 import renderToString, { renderToStringAsync } from "preact-render-to-string";
-import { allowAPIMethods } from "./lib/config.ts";
+import {
+	allowedAPIMethods,
+	templateBodyToken,
+	templateHeadToken,
+} from "./lib/config.ts";
 import type { Metadata, RouteContext, RouteModule } from "./lib/types.ts";
 
 export const handleRoute = (
@@ -11,12 +15,15 @@ export const handleRoute = (
 	routeModule: Option.Option<RouteModule>,
 ) =>
 	Effect.gen(function* () {
+		console.log({ routeModule });
 		const request = yield* HttpServerRequest.HttpServerRequest;
 
 		let html: string = "";
 		let head: string = "";
+		let status = 404;
 
 		if (routeModule._tag === "Some") {
+			status = 200;
 			if (
 				"page" in routeModule.value &&
 				typeof routeModule.value.page === "function"
@@ -47,7 +54,7 @@ export const handleRoute = (
 					html = yield* Effect.tryPromise(() => stringOrAsync);
 				}
 			} else {
-				for (const method of allowAPIMethods) {
+				for (const method of allowedAPIMethods) {
 					if (
 						method in routeModule.value &&
 						routeModule.value[method] &&
@@ -61,11 +68,8 @@ export const handleRoute = (
 
 		return HttpServerResponse.raw(
 			template
-				.replace(`<!--app-head-->`, head ?? "")
-				.replace(`<!--app-body-->`, html ?? "Not found"),
-			{
-				contentType: "text/html",
-				status: 404,
-			},
+				.replace(templateHeadToken, head ?? "")
+				.replace(templateBodyToken, html ?? "Not found"),
+			{ contentType: "text/html", status },
 		);
-	}).pipe(Effect.withSpan("handle-route-response"));
+	});

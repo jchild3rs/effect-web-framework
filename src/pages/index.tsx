@@ -3,8 +3,7 @@ import Counter from "~/islands/counter.tsx";
 import Island from "~/lib/island.tsx";
 import type { RouteContext } from "~/lib/types.ts";
 
-export const meta = (_context: RouteContext) =>
-	Effect.succeed({ title: "Page title" });
+export const meta = { title: "Page Title" };
 
 export const page = (_context: RouteContext) =>
 	Effect.succeed(() => (

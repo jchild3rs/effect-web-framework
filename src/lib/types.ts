@@ -1,7 +1,7 @@
 import type { HttpServerResponse } from "@effect/platform";
 import type { Effect } from "effect";
 import type { AnyComponent } from "preact";
-import type { allowAPIMethods } from "./config";
+import type { allowedAPIMethods } from "./config";
 
 export type RenderFunction = (
 	html: string,
@@ -39,7 +39,7 @@ export type RouteDataFn = (
 export type RouteModule<
 	Props extends Record<string, unknown> = Record<string, unknown>,
 > = {
-	[P in (typeof allowAPIMethods)[number]]?: RouteDataFn;
+	[P in (typeof allowedAPIMethods)[number]]?: RouteDataFn;
 } & {
 	page?: (context: RouteContext) => Effect.Effect<AnyComponent<Props>>;
 	meta?:
