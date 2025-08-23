@@ -15,11 +15,15 @@ export const getRouteEntries = Effect.gen(function* () {
 
 	const files = yield* fs.readDirectory(routeDir, { recursive: true });
 
-	const routeFiles = files.filter((file) => file.endsWith(".tsx"));
+	// const routeFiles = files.filter((file) => file.endsWith(".tsx"));
 
-	for (const routeFile of routeFiles) {
+	for (const routeFile of files.filter((f) => f.includes("."))) {
 		const route = `src/${routeFile}`;
-		const routeId = route.replace("src/", "").replace(".tsx", "");
+		console.log({ routeFile });
+		const routeId = route
+			.replace("src/", "")
+			.replace(".tsx", "")
+			.replace(".ts", "");
 
 		entries[routeId] = route.replace("src/", `./${routeDir}/`);
 	}

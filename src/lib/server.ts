@@ -1,6 +1,7 @@
 import("urlpattern-polyfill");
 
 import { createServer } from "node:http";
+import { NodeSdk } from "@effect/opentelemetry";
 import {
 	HttpMiddleware,
 	HttpRouter,
@@ -13,94 +14,82 @@ import {
 	NodeHttpServer,
 	NodeRuntime,
 } from "@effect/platform-node";
-import { Effect, Layer } from "effect";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { Effect, Layer, Option } from "effect";
 import type { ManifestChunk } from "vite";
 import { matchRoute, RouteEntriesLive } from "./bundle-entry-points.ts";
-import { isProduction, port } from "./config.ts";
+import { isProduction, port, routeDir } from "./config.ts";
 import { html } from "./html.ts";
-import { BuiltStaticAssets, BuiltStaticAssetsLive } from "./static-assets.ts";
-import type { RouteContext, RouteModule } from "./types.ts";
+import {
+	ManifestLive,
+	ProductionClientManifest,
+	ProductionServerManifest,
+} from "./manifest.ts";
+import { Middleware, MiddlewareLive } from "./middleware.ts";
+import { BuiltStaticAssetsLive } from "./static-assets.ts";
+import type { RouteModule } from "./types.ts";
+import { Uuid, UuidLive } from "./uuid.ts";
 import {
 	ViteDevServer,
 	ViteDevServerLive,
 	viteDevServerMiddleware,
+	viteStaticAssetsMiddleware,
 } from "./vite-dev-server.ts";
-
-const viteStaticAssetsMiddleware = HttpMiddleware.make((app) =>
-	Effect.gen(function* () {
-		if (isProduction) {
-			const request = yield* HttpServerRequest.HttpServerRequest;
-
-			const assets = yield* BuiltStaticAssets;
-
-			const matchedPath = assets.find((asset) =>
-				`/${asset}`.endsWith(request.url),
-			);
-
-			if (matchedPath) {
-				return yield* HttpServerResponse.file(`./dist/client/${matchedPath}`);
-			}
-		}
-
-		return yield* app;
-	}),
-);
 
 const viteRouteHandler = Effect.gen(function* () {
 	const request = yield* HttpServerRequest.HttpServerRequest;
 	const url = request.originalUrl;
+	const uuid = yield* Uuid;
+	const requestId = yield* uuid.generate;
 
 	let template = "<!--app-head--> <!--app-body-->";
 	let handleRoute: typeof import("../entry-server.tsx").handleRoute;
 	const matchedRoute = yield* matchRoute(url);
-	let routeEntry: ManifestChunk;
+	let routeEntry = Option.none<ManifestChunk>();
+	let routeModule = Option.none<RouteModule>();
 
-	let routeModule: RouteModule | null = null;
 	if (!isProduction) {
 		template = html(!isProduction);
 
 		const viteDevServer = yield* ViteDevServer;
 
 		if (matchedRoute) {
-			routeModule = yield* Effect.tryPromise(
-				() =>
-					viteDevServer.ssrLoadModule(
-						`/${matchedRoute.entry}`,
-					) as Promise<RouteModule>,
+			routeModule = Option.some(
+				yield* Effect.tryPromise(
+					() =>
+						// in dev mode, we want ot always load things fresh
+						viteDevServer.ssrLoadModule(
+							`/${matchedRoute.entry}`,
+						) as Promise<RouteModule>,
+				),
 			);
 		}
 
 		template = yield* Effect.tryPromise(() =>
+			// in dev mode, we want ot always load things fresh
 			viteDevServer.transformIndexHtml(url, template),
 		);
 
-		const renderModule = yield* Effect.tryPromise(() =>
+		handleRoute = (yield* Effect.tryPromise(() =>
 			viteDevServer.ssrLoadModule("/src/entry-server.tsx"),
-		);
-		handleRoute = renderModule.handleRoute;
+		)).handleRoute;
 	} else {
-		const manifest = yield* Effect.tryPromise(() =>
-			import("../../dist/client/.vite/manifest.json", {
-				with: { type: "json" },
-			}).then((mod) => mod.default),
-		);
-		const serverManifest = yield* Effect.tryPromise(() =>
-			import("../../dist/server/.vite/manifest.json", {
-				with: { type: "json" },
-			}).then((mod) => mod.default),
-		);
+		const manifest = yield* ProductionClientManifest;
+		const serverManifest = yield* ProductionServerManifest;
 
 		if (matchedRoute) {
 			const entryKey = matchedRoute.entry.replace(
 				"./",
 				"",
 			) as keyof typeof manifest;
-			routeEntry = serverManifest[entryKey];
+			routeEntry = Option.some(serverManifest[entryKey]);
 
 			const serverRouteEntry =
 				serverManifest[entryKey as keyof typeof serverManifest];
 
 			if (routeEntry) {
+				// TODO: consider loading all these up front and referencing (no reason to re-import every time)
 				routeModule = yield* Effect.tryPromise(
 					() => import(`../../dist/server/${serverRouteEntry.file}`),
 				);
@@ -111,7 +100,7 @@ const viteRouteHandler = Effect.gen(function* () {
 		}
 
 		const serverEntry = yield* Effect.tryPromise(
-			//@ts-expect-error
+			// @ts-expect-error
 			() => import("../../dist/server/entry-server.js"),
 		);
 
@@ -119,61 +108,53 @@ const viteRouteHandler = Effect.gen(function* () {
 			serverEntry.handleRoute as typeof import("../entry-server.tsx").handleRoute;
 	}
 
-	if (!routeModule) {
-		return HttpServerResponse.text("Not found", { status: 404 });
-	}
 	const searchParams = new URLSearchParams();
 	for (const keyVal of request.url.split("?")[1]?.split("&") ?? []) {
 		const [key, value] = keyVal.split("=");
 		searchParams.append(key, value);
 	}
 
-	let params: Record<string, string | undefined> = {};
+	const params: Record<string, string | undefined> = matchedRoute
+		? matchedRoute.result.pathname.groups
+		: {};
 
-	if (matchedRoute) {
-		// if (routeModule?.paramSchema) {
-		// 	params = yield* Schema.validate(routeModule.paramSchema)(
-		// 		matchedRoute.result.pathname.groups,
-		// 	).pipe(
-		// 		Effect.catchAll(() =>
-		// 			Effect.succeed(matchedRoute.result.pathname.groups),
-		// 		),
-		// 	);
-		// 	console.log({ params });
-		// } else {
-		params = matchedRoute.result.pathname.groups;
-		// }
-	}
+	const routeId =
+		matchedRoute?.entry
+			?.replace(`${routeDir}/index.tsx`, "/")
+			?.replace(routeDir, "")
+			?.replace("./", "")
+			?.replace("/index.tsx", "") ?? "unknown";
 
-	const context: RouteContext = {
-		params,
-		routeId: "todo",
-		routeType: request.url.startsWith("/api") ? "data" : "page",
-		searchParams,
-	};
+	const routeType = request.url.startsWith("/api") ? "data" : "page";
 
-	return yield* handleRoute(context, template, routeModule);
-});
-
-const SuppliedMiddleware = Effect.tryPromise({
-	try: () => import("../middleware.ts").then((mod) => mod?.middleware),
-	catch: () => null,
-}).pipe(Effect.withSpan("load-app-middleware"));
+	return yield* handleRoute(
+		{
+			pathParams: params,
+			requestId,
+			routeId,
+			routeType,
+			queryParams: searchParams,
+		},
+		template,
+		routeModule,
+	);
+}).pipe(Effect.withSpan("route-handler"));
 
 const appMiddleware = HttpMiddleware.make((app) =>
 	Effect.gen(function* () {
-		const suppliedMiddleware = yield* SuppliedMiddleware;
+		const middleware = yield* Middleware;
 
-		if (suppliedMiddleware) {
-			return yield* suppliedMiddleware(app);
+		if (middleware._tag === "Some") {
+			return yield* middleware.value(app) as typeof app;
 		}
 
 		return yield* app;
-	}).pipe(Effect.withSpan("app-middleware")),
+	}),
 );
 
 const router = HttpRouter.empty.pipe(
 	HttpRouter.all("*", viteRouteHandler),
+	HttpRouter.get("/healthz", HttpServerResponse.text("OK")),
 	HttpRouter.use(viteDevServerMiddleware),
 	HttpRouter.use(viteStaticAssetsMiddleware),
 	HttpRouter.use(appMiddleware),
@@ -196,15 +177,25 @@ const app = router.pipe(
 
 const ServerLive = NodeHttpServer.layer(() => createServer(), { port });
 
+const NodeSdkLive = NodeSdk.layer(() => ({
+	resource: { serviceName: "example-app-server" },
+	spanProcessor: new BatchSpanProcessor(new OTLPTraceExporter()),
+}));
+
 const AppLive = Layer.mergeAll(
 	ServerLive,
 	BuiltStaticAssetsLive,
 	ViteDevServerLive,
 	RouteEntriesLive,
+	MiddlewareLive,
+	UuidLive,
+	ManifestLive,
+	NodeContext.layer,
+	NodeSdkLive,
 );
 
 NodeRuntime.runMain(
-	Layer.launch(Layer.provide(app, AppLive)).pipe(
-		Effect.provide(NodeContext.layer),
+	Layer.launch(
+		Layer.provide(app, AppLive).pipe(Layer.provide(NodeContext.layer)),
 	),
 );

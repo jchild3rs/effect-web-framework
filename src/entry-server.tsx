@@ -1,55 +1,71 @@
-import { HttpServerResponse } from "@effect/platform";
-import { Effect } from "effect";
+import { HttpServerRequest, HttpServerResponse } from "@effect/platform";
+import { Effect, type Option } from "effect";
 import { Fragment } from "preact";
 import renderToString, { renderToStringAsync } from "preact-render-to-string";
+import { allowAPIMethods } from "./lib/config.ts";
 import type { Metadata, RouteContext, RouteModule } from "./lib/types.ts";
 
 export const handleRoute = (
 	context: RouteContext,
 	template: string,
-	routeModule: RouteModule,
+	routeModule: Option.Option<RouteModule>,
 ) =>
 	Effect.gen(function* () {
-		if (routeModule.page) {
-			let props = {};
-			let meta: Metadata | undefined;
+		const request = yield* HttpServerRequest.HttpServerRequest;
 
-			const Page = yield* routeModule.page;
+		let html: string = "";
+		let head: string = "";
 
-			if (typeof routeModule.load === "function") {
-				props = yield* routeModule.load(context);
-			}
+		if (routeModule._tag === "Some") {
+			if (
+				"page" in routeModule.value &&
+				typeof routeModule.value.page === "function"
+			) {
+				let meta: Metadata | undefined;
 
-			if (typeof routeModule.meta === "function") {
-				meta = yield* routeModule.meta(context);
+				if (typeof routeModule.value.meta === "function") {
+					meta = yield* routeModule.value.meta(context);
+				} else {
+					meta = routeModule.value.meta;
+				}
+
+				head = meta
+					? renderToString(
+							<Fragment>
+								<title>{meta.title}</title>
+								<meta name="description" content={meta.description} />
+							</Fragment>,
+						)
+					: "";
+
+				const Page = yield* routeModule.value.page(context);
+				const stringOrAsync = renderToStringAsync(<Page />);
+
+				if (typeof stringOrAsync === "string") {
+					html = stringOrAsync;
+				} else {
+					html = yield* Effect.tryPromise(() => stringOrAsync);
+				}
 			} else {
-				meta = routeModule.meta;
+				for (const method of allowAPIMethods) {
+					if (
+						method in routeModule.value &&
+						routeModule.value[method] &&
+						request.method === method
+					) {
+						return yield* routeModule.value[method](context);
+					}
+				}
 			}
-
-			const head = meta
-				? renderToString(
-						<Fragment>
-							<title>{meta.title}</title>
-							<meta name="description" content={meta.description} />
-						</Fragment>,
-					)
-				: null;
-
-			const renderResult = renderToStringAsync(<Page {...props} />);
-
-			let html: string;
-			if (typeof renderResult === "string") {
-				html = renderResult;
-			} else {
-				html = yield* Effect.tryPromise(() => renderResult);
-			}
-
-			return HttpServerResponse.html(
-				template
-					.replace(`<!--app-head-->`, head ?? "")
-					.replace(`<!--app-body-->`, html ?? ""),
-			);
 		}
 
-		return HttpServerResponse.text("Not found", { status: 404 });
-	});
+		return HttpServerResponse.raw(
+			template
+				.replace(`<!--app-head-->`, head ?? "")
+				.replace(`<!--app-body-->`, html ?? "Not found"),
+			{
+				contentType: "text/html",
+				status: 404,
+			},
+		);
+	}).pipe(Effect.withSpan("handle-route-response"));

@@ -5,15 +5,15 @@ export const meta: Metadata = { title: "Blog Post" };
 
 const BlogPostParamSchema = Schema.Struct({ id: Schema.NonEmptyString });
 
-export const load = (context: RouteContext) =>
+function Page(props: { id: string }) {
+	return <div>blog post! ID: {props.id}</div>;
+}
+
+export const page = (context: RouteContext) =>
 	Effect.gen(function* () {
-		const params = yield* Schema.validate(BlogPostParamSchema)(context.params);
+		const params = yield* Schema.validate(BlogPostParamSchema)(
+			context.pathParams,
+		);
 
-		return { postId: params.id } as const;
+		return () => <Page id={params.id} />;
 	});
-
-export const page = Effect.succeed(
-	(props: Effect.Effect.Success<ReturnType<typeof load>>) => (
-		<div>blog post! ID: {props.postId}</div>
-	),
-);

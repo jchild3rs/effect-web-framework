@@ -11,7 +11,8 @@ export function html(
 		: ``;
 
 	const devScript = isDev
-		? `<script type="module" src="/src/entry-client.tsx"></script>`
+		? `<script type="module" src="/src/entry-client.tsx"></script>
+        <script type="module" src="/node_modules/preact/devtools"></script>`
 		: ``;
 
 	const mainEntry = manifest?.["src/entry-client.tsx"];
@@ -41,14 +42,12 @@ export function html(
 		${globalStyles}
 		${routeStyles}
 	</head>
-  <body>
+	<body>
 		<div id="app" style="display: contents">
 			<!--app-body-->
 		</div>
-
-		${devScript}  
+		${devScript}
 		${globalScript}
-		${routeScript}
-    </body>
+		${routeScript}	</body>
 </html>`;
 }
