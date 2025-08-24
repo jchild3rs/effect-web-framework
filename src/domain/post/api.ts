@@ -6,7 +6,7 @@ import {
 import { Effect, Schema } from "effect";
 import { OkPost, OkPosts, PostNotFound } from "~/domain/post/schema.ts";
 
-const makeAPI = Effect.gen(function* () {
+const makePostAPI = Effect.gen(function* () {
 	const defaultClient = yield* HttpClient.HttpClient;
 	const client = defaultClient.pipe(
 		HttpClient.mapRequest(
@@ -18,7 +18,7 @@ const makeAPI = Effect.gen(function* () {
 		.get("/posts")
 		.pipe(
 			Effect.flatMap(HttpClientResponse.schemaJson(OkPosts)),
-			Effect.withSpan("all-posts"),
+			Effect.withSpan("fetch-all-posts"),
 		);
 
 	const byId = (id: string) =>
@@ -28,16 +28,16 @@ const makeAPI = Effect.gen(function* () {
 				Effect.flatMap(
 					HttpClientResponse.schemaJson(Schema.Union(OkPost, PostNotFound)),
 				),
-				Effect.withSpan("post-by-id"),
+				Effect.withSpan("fetch-post-by-id"),
 			);
 
 	return {
 		all,
 		byId,
 	} as const;
-}).pipe(Effect.annotateSpans("name", "post-api"));
+});
 
-export class PostAPI extends Effect.Service<PostAPI>()("PAPI", {
-	effect: makeAPI,
+export class PostAPI extends Effect.Service<PostAPI>()("PostAPI", {
+	effect: makePostAPI.pipe(Effect.annotateSpans("name", "post-api")),
 	accessors: true,
 }) {}

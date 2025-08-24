@@ -1,8 +1,8 @@
 import { Effect, Schema } from "effect";
 import { PostAPI } from "~/domain/post/api.ts";
 import { DocumentParts } from "~/lib/document.ts";
-import { NotFoundError } from "~/lib/errors.ts";
 import { RouteContext } from "~/lib/route-context";
+import { NotFoundError } from "~/lib/route-handler.ts";
 
 const BlogPostParamSchema = Schema.Struct({ id: Schema.NonEmptyString });
 
@@ -11,7 +11,7 @@ export const Page = Effect.gen(function* () {
 
 	const params = yield* Schema.validate(BlogPostParamSchema)(
 		context.pathParams,
-	);
+	).pipe(Effect.withSpan("validate-params"));
 
 	const response = yield* PostAPI.byId(params.id);
 
@@ -28,4 +28,4 @@ export const Page = Effect.gen(function* () {
 			</div>
 		),
 	});
-}).pipe(Effect.provide(PostAPI.Default));
+}).pipe(Effect.provide(PostAPI.Default), Effect.withSpan("blog-page-by-id"));

@@ -15,8 +15,10 @@ import {
 import { Effect, Layer, Logger, LogLevel } from "effect";
 import { RouteEntriesLive } from "./bundle-entry-points.ts";
 import { port } from "./config.ts";
+import { Locals } from "./locals.ts";
 import { ManifestLive } from "./manifest.ts";
 import { appMiddleware, MiddlewareLive } from "./middleware.ts";
+import { RouteContext } from "./route-context.ts";
 import { routeHandler } from "./route-handler.ts";
 import { BuiltStaticAssetsLive } from "./static-assets.ts";
 import { NodeSdkLive } from "./tracing.ts";
@@ -33,6 +35,15 @@ const router = HttpRouter.empty.pipe(
 	HttpRouter.use(viteDevServerMiddleware),
 	HttpRouter.use(viteStaticAssetsMiddleware),
 	HttpRouter.use(appMiddleware),
+	// By providing the empty state here, we _essentially_ get CLS (Continuation Local Storage) for free.
+	Effect.provideService(Locals, {}),
+	Effect.provideService(RouteContext, {
+		queryParams: new URLSearchParams(),
+		pathParams: {},
+		requestId: "",
+		routeId: "",
+		routeType: "page",
+	}),
 );
 
 const server = router.pipe(
@@ -54,7 +65,6 @@ const server = router.pipe(
 const ServerLive = Layer.mergeAll(
 	BuiltStaticAssetsLive,
 	ViteDevServerLive,
-	RouteEntriesLive,
 	MiddlewareLive,
 	UuidLive,
 	ManifestLive,
@@ -64,9 +74,15 @@ const AppLive = Layer.mergeAll(
 	NodeHttpServer.layer(() => createServer(), { port }),
 	NodeContext.layer,
 	FetchHttpClient.layer,
-	NodeSdkLive,
 );
 
 NodeRuntime.runMain(
-	Layer.launch(Layer.provide(server, ServerLive).pipe(Layer.provide(AppLive))),
+	Layer.launch(
+		Layer.provide(server, ServerLive).pipe(
+			Layer.provide(AppLive),
+			Layer.provide(NodeSdkLive),
+			Layer.provide(RouteEntriesLive),
+			Layer.provide(NodeContext.layer),
+		),
+	),
 );

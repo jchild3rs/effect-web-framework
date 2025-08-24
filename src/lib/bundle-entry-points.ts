@@ -1,17 +1,17 @@
 import { FileSystem } from "@effect/platform";
-import { NodeContext } from "@effect/platform-node";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { origin, routeDir } from "./config.ts";
 
 export class RouteEntries extends Context.Tag("RouteEntries")<
 	RouteEntries,
-	Record<string, string>
+	Readonly<Record<string, { path: string; pattern: URLPattern }>>
 >() {}
 
-export const getRouteEntries = Effect.gen(function* () {
+export const makeRouteEntries = Effect.gen(function* () {
+	yield* Effect.logDebug("makeRouteEntries()");
 	const fs = yield* FileSystem.FileSystem;
 
-	const entries: Record<string, string> = {};
+	const entries: Record<string, { path: string; pattern: URLPattern }> = {};
 
 	const files = yield* fs.readDirectory(routeDir, { recursive: true });
 
@@ -22,33 +22,36 @@ export const getRouteEntries = Effect.gen(function* () {
 			.replace(".tsx", "")
 			.replace(".ts", "");
 
-		entries[routeId] = route.replace("src/", `./${routeDir}/`);
+		const path = route.replace("src/", `./${routeDir}/`);
+		entries[routeId] = {
+			path,
+			pattern: new URLPattern({
+				pathname: transformRoutePath(routeId),
+				baseURL: origin,
+			}),
+		};
 	}
 
-	return entries;
-}).pipe(Effect.provide(NodeContext.layer));
+	yield* Effect.logDebug(`getRouteEntries(${JSON.stringify(entries)})`);
 
-export const RouteEntriesLive = Layer.effect(RouteEntries, getRouteEntries);
+	return entries;
+});
+
+export const RouteEntriesLive = Layer.effect(RouteEntries, makeRouteEntries);
 
 export const bundleEntryPoints = Effect.gen(function* () {
 	const routeEntries = yield* RouteEntries;
 
 	return {
-		"entry-client": "./src/entry-client.tsx",
-		...routeEntries,
-	};
-});
-
-export const routeURLPatterns = Effect.gen(function* () {
-	const entries = yield* RouteEntries;
-
-	return Object.keys(entries).map(
-		(key) =>
-			new URLPattern({
-				pathname: transformRoutePath(key),
+		"entry-client": {
+			path: "./src/entry-client.tsx",
+			pattern: new URLPattern({
+				pathname: transformRoutePath("entry-client"),
 				baseURL: origin,
 			}),
-	);
+		},
+		...routeEntries,
+	};
 });
 
 function transformRoutePath(path: string): string {
@@ -60,6 +63,12 @@ function transformRoutePath(path: string): string {
 
 	return `/${transformedPath}`;
 }
+
+// const URLPatternFromSelf = Schema.declare(
+// 	(input: unknown): input is URLPattern => {
+// 		return typeof input === "object" && input !== null && "pathname" in input;
+// 	},
+// );
 
 const URLPatternResultFromSelf = Schema.declare(
 	(input: unknown): input is URLPatternResult => {
@@ -75,15 +84,13 @@ export type MatchedRoute = typeof MatchedRoute.Type;
 
 export const matchRoute = (path: string) =>
 	Effect.gen(function* () {
-		const entries = yield* RouteEntries;
-		const patterns = yield* routeURLPatterns;
+		const entries = Object.entries(yield* RouteEntries);
 
-		for (let i = 0; i < patterns.length; i++) {
-			const pattern = patterns[i];
-			const result = pattern.exec(path, origin);
+		for (let i = 0; i < entries.length; i++) {
+			const [, entry] = entries[i];
+			const result = entry.pattern.exec(path, origin);
 			if (result) {
-				const entry = Object.values(entries)[i];
-				return Option.some(MatchedRoute.make({ entry, result }));
+				return Option.some(MatchedRoute.make({ entry: entry.path, result }));
 			}
 		}
 

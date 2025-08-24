@@ -10,6 +10,8 @@ export const Page = Effect.gen(function* () {
 	return DocumentParts.make({
 		body: (
 			<>
+				<a href="/global-404-askdjfakldsf">Global 404</a>
+				<a href="/blog/bad-id">Route 404</a>
 				<a href="/blog">Blog</a>
 				<a href="/blog/1">A Post</a>
 				Request ID: {locals.requestId}

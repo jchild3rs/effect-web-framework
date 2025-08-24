@@ -6,7 +6,7 @@ import {
 	templateBodyToken,
 	templateHeadToken,
 } from "./lib/config.ts";
-import { NotFoundError, type Redirect } from "./lib/errors.ts";
+import { NotFoundError, type Redirect } from "./lib/route-handler.ts";
 import type {
 	DataRouteModule,
 	RouteContext,

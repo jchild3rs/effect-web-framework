@@ -1,5 +1,5 @@
 import { HttpServerRequest, HttpServerResponse } from "@effect/platform";
-import { Effect, Option, Schema } from "effect";
+import { Data, Effect, Option, Schema } from "effect";
 import { matchRoute } from "./bundle-entry-points.ts";
 import { isProduction, routeDir } from "./config.ts";
 import { document } from "./document.ts";
@@ -12,18 +12,30 @@ import type { RouteModule } from "./types.ts";
 import { Uuid } from "./uuid.ts";
 import { ViteDevServer } from "./vite-dev-server.ts";
 
+export class NotFoundError extends Data.TaggedError("NotFound") {}
+
+export class Redirect extends Data.TaggedError("Redirect") {
+	public readonly location: string;
+	public readonly status: number = 302;
+
+	constructor(_location: string, _status?: number) {
+		super();
+		this.location = _location;
+		if (_status) {
+			this.status = _status;
+		}
+	}
+}
+
 export const routeHandler = Effect.gen(function* () {
-	const routeContext = yield* RouteContext;
 	const request = yield* HttpServerRequest.HttpServerRequest;
-	const url = request.originalUrl;
-	const matchedRoute = yield* matchRoute(url);
-	const uuid = yield* Uuid;
+	const matchedRoute = yield* matchRoute(request.url);
 
 	if (Option.isNone(matchedRoute)) {
 		return HttpServerResponse.text("Not found", { status: 404 });
 	}
 
-	let template = document({ isProduction });
+	let template = yield* document({ isProduction });
 	let routeModule: RouteModule = {};
 	let handleRoute: typeof import("../entry-server.tsx").handleRoute;
 
@@ -38,7 +50,7 @@ export const routeHandler = Effect.gen(function* () {
 		const serverRouteEntry =
 			serverManifest[entryKey as keyof typeof serverManifest];
 
-		template = document({
+		template = yield* document({
 			isProduction,
 			mainEntry: clientManifest["src/entry-client.tsx"],
 			routeEntry: clientManifest[entryKey],
@@ -52,8 +64,8 @@ export const routeHandler = Effect.gen(function* () {
 		const viteDevServer = yield* ViteDevServer;
 
 		template = yield* Effect.tryPromise(() =>
-			viteDevServer.transformIndexHtml(url, template),
-		);
+			viteDevServer.transformIndexHtml(request.originalUrl, template),
+		).pipe(Effect.withSpan("transform-html"));
 
 		routeModule = yield* loadDevModule<RouteModule>(matchedRoute.value.entry);
 		handleRoute = yield* loadDevModule<typeof import("../entry-server.tsx")>(
@@ -61,6 +73,7 @@ export const routeHandler = Effect.gen(function* () {
 		).pipe(Effect.map((mod) => mod.handleRoute));
 	}
 
+	const routeContext = yield* RouteContext;
 	routeContext.queryParams = new URLSearchParams();
 	for (const keyVal of request.url.split("?")[1]?.split("&") ?? []) {
 		const [key, value] = keyVal.split("=");
@@ -80,6 +93,7 @@ export const routeHandler = Effect.gen(function* () {
 
 	routeContext.routeType = request.url.startsWith("/api") ? "data" : "page";
 
+	const uuid = yield* Uuid;
 	routeContext.requestId = yield* uuid.generate;
 
 	yield* Schema.validate(RouteContextData)(routeContext);
@@ -91,9 +105,13 @@ function loadModule<T>(file: string) {
 	return Effect.gen(function* () {
 		yield* Effect.logDebug(`loadModule(${file})`);
 		return yield* Effect.promise(
-			() => import(`../../dist/server/${file}`) as Promise<T>,
+			() =>
+				import(`../../dist/server/${file.replace(".js", "")}.js`) as Promise<T>,
 		);
-	});
+	}).pipe(
+		Effect.withSpan("load-module"),
+		Effect.annotateSpans({ key: "file", value: file }),
+	);
 }
 
 function loadDevModule<T>(file: string) {
@@ -103,40 +121,8 @@ function loadDevModule<T>(file: string) {
 		return yield* Effect.promise(
 			() => viteDevServer.ssrLoadModule(file) as Promise<T>,
 		);
-	});
+	}).pipe(
+		Effect.withSpan("load-dev-module"),
+		Effect.annotateSpans({ key: "file", value: file }),
+	);
 }
-
-// function makeRouteContext(matchedRoute: MatchedRoute) {
-// 	return Effect.gen(function* () {
-// 		const request = yield* HttpServerRequest.HttpServerRequest;
-// 		const uuid = yield* Uuid;
-// 		const requestId = yield* uuid.generate;
-//
-// 		const searchParams = new URLSearchParams();
-// 		for (const keyVal of request.url.split("?")[1]?.split("&") ?? []) {
-// 			const [key, value] = keyVal.split("=");
-// 			searchParams.append(key, value);
-// 		}
-//
-// 		const params: Record<string, string | undefined> = matchedRoute
-// 			? matchedRoute.result.pathname.groups
-// 			: {};
-//
-// 		const routeId =
-// 			matchedRoute?.entry
-// 				?.replace(`${routeDir}/index.tsx`, "/")
-// 				?.replace(routeDir, "")
-// 				?.replace("./", "")
-// 				?.replace("/index.tsx", "") ?? "unknown";
-//
-// 		const routeType = request.url.startsWith("/api") ? "data" : "page";
-//
-// 		return {
-// 			pathParams: params,
-// 			requestId,
-// 			routeId,
-// 			routeType,
-// 			queryParams: searchParams,
-// 		} satisfies RouteContext;
-// 	});
-// }

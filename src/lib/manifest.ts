@@ -13,7 +13,7 @@ const ProductionClientManifestLive = Layer.effect(
 		import("../../dist/client/.vite/manifest.json", {
 			with: { type: "json" },
 		}).then((mod) => mod.default),
-	),
+	).pipe(Effect.withSpan("load-client-manifest")),
 );
 
 export class ProductionServerManifest extends Context.Tag(
@@ -29,7 +29,7 @@ const ProductionServerManifestLive = Layer.effect(
 		import("../../dist/server/.vite/manifest.json", {
 			with: { type: "json" },
 		}).then((mod) => mod.default),
-	),
+	).pipe(Effect.withSpan("load-server-manifest")),
 );
 
 export const ManifestLive = Layer.mergeAll(

@@ -1,4 +1,4 @@
-import { Schema } from "effect";
+import { Effect, Schema } from "effect";
 import type { JSX } from "preact";
 import type { ManifestChunk } from "vite";
 import { templateBodyToken, templateHeadToken } from "./config.ts";
@@ -9,37 +9,38 @@ type DocumentOptions = {
 	routeEntry?: ManifestChunk;
 };
 
-export function document({
+export const document = ({
 	isProduction,
 	mainEntry,
 	routeEntry,
-}: DocumentOptions) {
-	// loading here in head (along with the module) mainly to prevent FOUC in dev mode
-	const devStyles = isProduction
-		? ""
-		: `<link rel="stylesheet" href="/src/style.css" />`;
+}: DocumentOptions) =>
+	Effect.sync(() => {
+		// loading here in head (along with the module) mainly to prevent FOUC in dev mode
+		const devStyles = isProduction
+			? ""
+			: `<link rel="stylesheet" href="/src/style.css" />`;
 
-	const devScript = isProduction
-		? ""
-		: `<script type="module" src="/src/entry-client.tsx"></script>`;
+		const devScript = isProduction
+			? ""
+			: `<script type="module" src="/src/entry-client.tsx"></script>`;
 
-	const globalStyles = mainEntry?.css
-		? `<link rel="stylesheet" href="/${mainEntry.css}" />`
-		: ``;
+		const globalStyles = mainEntry?.css
+			? `<link rel="stylesheet" href="/${mainEntry.css}" />`
+			: ``;
 
-	const globalScript = mainEntry?.file
-		? `<script type="module" src="/${mainEntry.file}"></script>`
-		: ``;
+		const globalScript = mainEntry?.file
+			? `<script type="module" src="/${mainEntry.file}"></script>`
+			: ``;
 
-	const routeStyles = routeEntry?.css
-		? `<link rel="stylesheet" href="/${routeEntry.css}" />`
-		: ``;
+		const routeStyles = routeEntry?.css
+			? `<link rel="stylesheet" href="/${routeEntry.css}" />`
+			: ``;
 
-	const routeScript = routeEntry?.file
-		? `<script type="module" src="/${routeEntry.file}"></script>`
-		: ``;
+		const routeScript = routeEntry?.file
+			? `<script type="module" src="/${routeEntry.file}"></script>`
+			: ``;
 
-	return `<!doctype html>
+		return `<!doctype html>
 <html lang="en">
 <head>
   ${templateHeadToken}
@@ -55,7 +56,7 @@ export function document({
   ${routeScript}
 </body>
 </html>`;
-}
+	}).pipe(Effect.withSpan("generate-document-html"));
 
 const JSXElementFromSelf = Schema.declare(
 	(input: unknown): input is JSX.Element => {

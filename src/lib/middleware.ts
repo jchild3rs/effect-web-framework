@@ -2,7 +2,6 @@ import { HttpMiddleware, HttpServerRequest } from "@effect/platform";
 import { Context, Effect, Layer, Option } from "effect";
 import { matchRoute } from "../lib/bundle-entry-points.ts";
 import { Locals } from "../lib/locals.ts";
-import { RouteContext } from "../lib/route-context.ts";
 import { Uuid } from "../lib/uuid.ts";
 
 export class Middleware extends Context.Tag("Middleware")<
@@ -34,16 +33,5 @@ export const appMiddleware = HttpMiddleware.make((app) =>
 		}
 
 		return yield* app;
-	}).pipe(
-		// By providing the empty state here, we basically
-		// get CLS (Continuation Local Storage) for free.
-		Effect.provideService(Locals, {}),
-		Effect.provideService(RouteContext, {
-			queryParams: new URLSearchParams(),
-			pathParams: {},
-			requestId: "",
-			routeId: "",
-			routeType: "page",
-		}),
-	),
+	}),
 );
