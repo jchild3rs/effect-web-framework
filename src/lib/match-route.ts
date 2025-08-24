@@ -1,6 +1,6 @@
 import { Effect, Option, Schema } from "effect";
-import { RouteEntries } from "~/lib/bundle-entry-points.ts";
-import { origin } from "~/lib/config.ts";
+import { RouteEntries } from "./bundle-entry-points.ts";
+import { origin } from "./config.ts";
 
 const URLPatternResultFromSelf = Schema.declare(
 	(input: unknown): input is URLPatternResult => {

@@ -1,8 +1,8 @@
 import { HttpMiddleware, HttpServerRequest } from "@effect/platform";
 import { Context, Effect, Layer, Option } from "effect";
-import { matchRoute } from "~/lib/match-route.ts";
-import { Locals } from "../lib/locals.ts";
-import { Uuid } from "../lib/uuid.ts";
+import { Locals } from "./locals.ts";
+import { matchRoute } from "./match-route.ts";
+import { Uuid } from "./uuid.ts";
 
 export class Middleware extends Context.Tag("Middleware")<
 	Middleware,

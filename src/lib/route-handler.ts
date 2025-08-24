@@ -1,12 +1,12 @@
 import { HttpServerRequest, HttpServerResponse } from "@effect/platform";
 import { Effect, Option, Schema } from "effect";
-import { matchRoute } from "~/lib/match-route.ts";
 import { isProduction, routeDir } from "./config.ts";
 import { document } from "./document.ts";
 import {
 	ProductionClientManifest,
 	ProductionServerManifest,
 } from "./manifest.ts";
+import { matchRoute } from "./match-route.ts";
 import { RouteContext, RouteContextData } from "./route-context.ts";
 import type { RouteModule } from "./types.ts";
 import { Uuid } from "./uuid.ts";

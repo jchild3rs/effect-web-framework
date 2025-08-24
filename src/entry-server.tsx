@@ -1,13 +1,13 @@
 import { HttpServerRequest, HttpServerResponse } from "@effect/platform";
 import { Effect } from "effect";
 import renderToString, { renderToStringAsync } from "preact-render-to-string";
-import { NotFound } from "~/lib/not-found.ts";
-import type { Redirect } from "~/lib/redirect.ts";
 import {
 	allowedAPIMethods,
 	templateBodyToken,
 	templateHeadToken,
 } from "./lib/config.ts";
+import { NotFound } from "./lib/not-found.ts";
+import type { Redirect } from "./lib/redirect.ts";
 import type {
 	DataRouteModule,
 	RouteContext,

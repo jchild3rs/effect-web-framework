@@ -1,8 +1,8 @@
 import type { HttpServerResponse } from "@effect/platform";
 import type { Effect } from "effect";
-import type { DocumentParts } from "~/lib/document.ts";
-import type { Locals } from "~/lib/locals.ts";
-import type { allowedAPIMethods } from "./config";
+import type { allowedAPIMethods } from "./config.ts";
+import type { DocumentParts } from "./document.ts";
+import type { Locals } from "./locals.ts";
 
 export type RenderFunction = (
 	html: string,
