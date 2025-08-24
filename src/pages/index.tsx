@@ -1,8 +1,8 @@
 import { Effect } from "effect";
-import Counter from "~/islands/counter.tsx";
-import { DocumentParts } from "~/lib/document.ts";
-import Island from "~/lib/island.tsx";
-import { Locals } from "~/lib/locals.ts";
+import Counter from "../islands/counter.tsx";
+import { DocumentParts } from "../lib/document.ts";
+import Island from "../lib/island.tsx";
+import { Locals } from "../lib/locals.ts";
 
 export const Page = Effect.gen(function* () {
 	const locals = yield* Locals;

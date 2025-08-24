@@ -4,7 +4,7 @@ import {
 	HttpClientResponse,
 } from "@effect/platform";
 import { Effect, Schema } from "effect";
-import { OkPost, OkPosts, PostNotFound } from "~/domain/post/schema.ts";
+import { OkPost, OkPosts, PostNotFound } from "./schema.ts";
 
 const makePostAPI = Effect.gen(function* () {
 	const defaultClient = yield* HttpClient.HttpClient;

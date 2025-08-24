@@ -1,6 +1,5 @@
 import("urlpattern-polyfill");
 
-import path from "node:path";
 import { NodeContext } from "@effect/platform-node";
 import { Config, Effect } from "effect";
 import { defineConfig } from "vite";
@@ -32,7 +31,6 @@ const ORIGIN = await Effect.runPromise(
 );
 
 export default defineConfig({
-	resolve: { alias: { "~": path.resolve(__dirname, "./src") } },
 	server: { cors: { origin: ORIGIN } },
 	build: {
 		manifest: true,

@@ -19,11 +19,7 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"noFallthroughCasesInSwitch": true,
-		"noUncheckedSideEffectImports": true,
-		"rootDir": "src",
-		"paths": {
-			"~/*": ["./src/*"]
-		}
+		"noUncheckedSideEffectImports": true
 	},
-	"include": ["src", "lib"]
+	"include": ["src"]
 }

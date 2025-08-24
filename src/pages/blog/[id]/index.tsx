@@ -1,8 +1,8 @@
 import { Effect, Schema } from "effect";
-import { PostAPI } from "~/domain/post/api.ts";
-import { DocumentParts } from "~/lib/document.ts";
-import { NotFound } from "~/lib/not-found.ts";
-import { RouteContext } from "~/lib/route-context";
+import { PostAPI } from "../../../domain/post/api.ts";
+import { DocumentParts } from "../../../lib/document.ts";
+import { NotFound } from "../../../lib/not-found.ts";
+import { RouteContext } from "../../../lib/route-context";
 
 const BlogPostParamSchema = Schema.Struct({ id: Schema.NonEmptyString });
 

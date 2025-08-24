@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { PostAPI } from "~/domain/post/api.ts";
-import { DocumentParts } from "~/lib/document.ts";
+import { PostAPI } from "../../domain/post/api.ts";
+import { DocumentParts } from "../../lib/document.ts";
 
 export const Page = Effect.gen(function* () {
 	const { body: allPosts } = yield* PostAPI.all;

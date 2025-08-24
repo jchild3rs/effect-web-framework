@@ -1,15 +1,19 @@
 import "./style.css";
 import { type AnyComponent, hydrate } from "preact";
 
-async function mount(Comp: AnyComponent, elm: HTMLElement) {
+async function mount(Component: AnyComponent, elm: HTMLElement) {
 	let props = {};
 
 	if (elm.dataset.props) {
-		props = JSON.parse(elm.dataset.props);
-		delete elm.dataset.props;
+		try {
+			props = JSON.parse(elm.dataset.props);
+			delete elm.dataset.props;
+		} catch (e) {
+			console.error("Failed to parse props", elm.dataset.props, e);
+		}
 	}
 
-	hydrate(<Comp {...props} />, elm);
+	hydrate(<Component {...props} />, elm);
 	elm.dataset.mounted = "true";
 }
 
