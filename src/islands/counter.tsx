@@ -1,7 +1,6 @@
 import { useState } from "preact/hooks";
 
 const Counter = (props: { initialCount?: number }) => {
-	console.trace("rendering counter");
 	const [count, setCount] = useState<number>(() => props.initialCount ?? 0);
 
 	return (
