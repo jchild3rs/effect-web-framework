@@ -1,10 +1,11 @@
 import { Effect } from "effect";
 import { PostAPI } from "~/domain/post/api.ts";
+import { DocumentParts } from "~/lib/document.ts";
 
-export const page = Effect.gen(function* () {
+export const Page = Effect.gen(function* () {
 	const { body: allPosts } = yield* PostAPI.all;
 
-	return {
+	return DocumentParts.make({
 		meta: <title>Blog Posts</title>,
 		body: (
 			<>
@@ -21,5 +22,5 @@ export const page = Effect.gen(function* () {
 				<div style={{ height: 2000 }}></div>
 			</>
 		),
-	};
+	});
 }).pipe(Effect.provide(PostAPI.Default));

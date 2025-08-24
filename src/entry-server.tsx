@@ -25,8 +25,8 @@ export const handleRoute = (
 		let head = "";
 
 		if (routeModule) {
-			if ("page" in routeModule && routeModule.page) {
-				const pageRouteModule = yield* routeModule.page;
+			if ("Page" in routeModule && routeModule.Page) {
+				const pageRouteModule = yield* routeModule.Page;
 				head = pageRouteModule.meta ? renderToString(pageRouteModule.meta) : "";
 
 				const stringOrAsync = renderToStringAsync(pageRouteModule.body);
@@ -36,7 +36,7 @@ export const handleRoute = (
 					body = yield* Effect.tryPromise(() => stringOrAsync);
 				}
 			} else {
-				const mod = routeModule as DataRouteModule; // todo give love
+				const mod = routeModule as DataRouteModule; // todo give love/dont want to assert
 
 				for (const method of allowedAPIMethods) {
 					if (

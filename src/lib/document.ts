@@ -1,3 +1,5 @@
+import { Schema } from "effect";
+import type { JSX } from "preact";
 import type { ManifestChunk } from "vite";
 import { templateBodyToken, templateHeadToken } from "./config.ts";
 
@@ -54,3 +56,16 @@ export function document({
 </body>
 </html>`;
 }
+
+const JSXElementFromSelf = Schema.declare(
+	(input: unknown): input is JSX.Element => {
+		return typeof input === "object" && input !== null && "type" in input;
+	},
+);
+
+export const DocumentParts = Schema.Struct({
+	body: JSXElementFromSelf,
+	meta: Schema.optional(JSXElementFromSelf),
+});
+
+export type DocumentParts = typeof DocumentParts.Type;

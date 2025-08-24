@@ -1,12 +1,12 @@
 import { Effect, Schema } from "effect";
 import { PostAPI } from "~/domain/post/api.ts";
+import { DocumentParts } from "~/lib/document.ts";
 import { NotFoundError } from "~/lib/errors.ts";
 import { RouteContext } from "~/lib/route-context";
-import type { Page } from "~/lib/types.ts";
 
 const BlogPostParamSchema = Schema.Struct({ id: Schema.NonEmptyString });
 
-export const page = Effect.gen(function* () {
+export const Page = Effect.gen(function* () {
 	const context = yield* RouteContext;
 
 	const params = yield* Schema.validate(BlogPostParamSchema)(
@@ -19,7 +19,7 @@ export const page = Effect.gen(function* () {
 		return yield* Effect.fail(new NotFoundError());
 	}
 
-	return {
+	return DocumentParts.make({
 		meta: <title>{response.body.title} | Blog</title>,
 		body: (
 			<div>
@@ -27,5 +27,5 @@ export const page = Effect.gen(function* () {
 				<pre>{JSON.stringify(response.body, null, 2)}</pre>
 			</div>
 		),
-	} satisfies Page;
+	});
 }).pipe(Effect.provide(PostAPI.Default));

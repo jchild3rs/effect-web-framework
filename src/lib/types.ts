@@ -1,6 +1,6 @@
 import type { HttpServerResponse } from "@effect/platform";
 import type { Effect } from "effect";
-import type { JSX } from "preact";
+import type { DocumentParts } from "~/lib/document.ts";
 import type { Locals } from "~/lib/locals.ts";
 import type { allowedAPIMethods } from "./config";
 
@@ -37,11 +37,6 @@ export type RouteDataFn = (
 	context: RouteContext,
 ) => HttpServerResponse.HttpServerResponse;
 
-export type Page = {
-	body: JSX.Element;
-	meta?: JSX.Element;
-};
-
 // type test = Data.TaggedEnum<{
 // 	DataRoute: {
 // 		[P in (typeof allowedAPIMethods)[number]]?: RouteDataFn;
@@ -54,11 +49,13 @@ export type Page = {
 // export const { DataRoute, PageRoute } = Data.taggedEnum<test>();
 
 export type PageRouteModule = {
-	page?: Effect.Effect<Page, unknown, Locals>;
+	Page?: Effect.Effect<DocumentParts, unknown, Locals>;
 };
 
+type AllowedAPIMethods = (typeof allowedAPIMethods)[number];
+
 export type DataRouteModule = {
-	[P in (typeof allowedAPIMethods)[number]]?: RouteDataFn;
+	[Method in AllowedAPIMethods]?: RouteDataFn;
 };
 
 export type RouteModule = PageRouteModule | DataRouteModule;
