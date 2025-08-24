@@ -8,7 +8,7 @@ export default defineConfig({
 		outDir: "dist/client",
 		rollupOptions: {
 			input: {
-				"entry-client": "src/entry-client.tsx",
+				global: "src/entry-client.tsx",
 			},
 		},
 	},

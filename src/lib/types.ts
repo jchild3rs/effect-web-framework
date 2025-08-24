@@ -1,6 +1,7 @@
 import type { HttpServerResponse } from "@effect/platform";
 import type { Effect } from "effect";
-import type { AnyComponent } from "preact";
+import type { JSX } from "preact";
+import type { Locals } from "~/lib/locals.ts";
 import type { allowedAPIMethods } from "./config";
 
 export type RenderFunction = (
@@ -36,14 +37,28 @@ export type RouteDataFn = (
 	context: RouteContext,
 ) => HttpServerResponse.HttpServerResponse;
 
-export type RouteModule<
-	Props extends Record<string, unknown> = Record<string, unknown>,
-> = {
-	[P in (typeof allowedAPIMethods)[number]]?: RouteDataFn;
-} & {
-	page?: (context: RouteContext) => Effect.Effect<AnyComponent<Props>>;
-	meta?:
-		| Metadata
-		| ((context: RouteContext) => Effect.Effect<Metadata, unknown>);
-	// [key: typeof allowAPIMethods[number]]: RouteDataFn
+export type Page = {
+	body: JSX.Element;
+	meta?: JSX.Element;
 };
+
+// type test = Data.TaggedEnum<{
+// 	DataRoute: {
+// 		[P in (typeof allowedAPIMethods)[number]]?: RouteDataFn;
+// 	};
+// 	PageRoute: {
+// 		page?: Effect.Effect<Page, unknown, Locals>;
+// 	};
+// }>;
+//
+// export const { DataRoute, PageRoute } = Data.taggedEnum<test>();
+
+export type PageRouteModule = {
+	page?: Effect.Effect<Page, unknown, Locals>;
+};
+
+export type DataRouteModule = {
+	[P in (typeof allowedAPIMethods)[number]]?: RouteDataFn;
+};
+
+export type RouteModule = PageRouteModule | DataRouteModule;

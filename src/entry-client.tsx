@@ -1,18 +1,23 @@
 import "./style.css";
-import type { FunctionComponent } from "preact";
-
-async function mount(Comp: FunctionComponent, elm: HTMLElement) {
-	const { hydrate } = await import("preact");
-	let props = {};
-	if (elm?.dataset?.props) {
-		props = JSON.parse(elm.dataset.props);
-		delete elm.dataset.props;
-	}
-
-	hydrate(<Comp {...props} />, elm);
-}
+import { hydrate } from "preact";
 
 async function hydrateIslands() {
+	if (typeof document === "undefined") return;
+
+	async function mount(
+		Comp: import("preact").FunctionComponent,
+		elm: HTMLElement,
+	) {
+		let props = {};
+
+		if (elm?.dataset?.props) {
+			props = JSON.parse(elm.dataset.props);
+			delete elm.dataset.props;
+		}
+
+		hydrate(<Comp {...props} />, elm);
+	}
+
 	for (const eagerIsland of document.querySelectorAll(
 		"[data-island][data-loading='eager']",
 	) as unknown as HTMLDivElement[]) {

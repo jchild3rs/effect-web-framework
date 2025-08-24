@@ -1,19 +1,25 @@
 import { Effect } from "effect";
-import type { Metadata, RouteContext } from "~/lib/types.ts";
+import { PostAPI } from "~/domain/post/api.ts";
 
-export const meta: Metadata = { title: "Blog" };
+export const page = Effect.gen(function* () {
+	const { body: allPosts } = yield* PostAPI.all;
 
-export const load = () =>
-	Effect.succeed({
-		posts: [] as Array<{ id: string; title: string }>, // fake
-	});
+	return {
+		meta: <title>Blog Posts</title>,
+		body: (
+			<>
+				<a href="/blog">Blog</a>
+				<a href="/blog/123">A Post</a>
 
-export const page = (_context: RouteContext) =>
-	Effect.succeed((props: Effect.Effect.Success<ReturnType<typeof load>>) => (
-		<div>
-			blog index!
-			{props.posts.map((post) => (
-				<div key={post.id}>{post.title}</div>
-			))}
-		</div>
-	));
+				{allPosts.map((post) => (
+					<div key={post.id}>
+						<a href={`/blog/${post.id}`}>{post.title}</a>
+					</div>
+				))}
+
+				{/*for testing scroll observing/lazy hydration*/}
+				<div style={{ height: 2000 }}></div>
+			</>
+		),
+	};
+}).pipe(Effect.provide(PostAPI.Default));

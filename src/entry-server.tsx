@@ -1,75 +1,68 @@
 import { HttpServerRequest, HttpServerResponse } from "@effect/platform";
-import { Effect, type Option } from "effect";
-import { Fragment } from "preact";
+import { Effect } from "effect";
 import renderToString, { renderToStringAsync } from "preact-render-to-string";
 import {
 	allowedAPIMethods,
 	templateBodyToken,
 	templateHeadToken,
 } from "./lib/config.ts";
-import type { Metadata, RouteContext, RouteModule } from "./lib/types.ts";
+import { NotFoundError, type Redirect } from "./lib/errors.ts";
+import type {
+	DataRouteModule,
+	RouteContext,
+	RouteModule,
+} from "./lib/types.ts";
 
 export const handleRoute = (
 	context: RouteContext,
 	template: string,
-	routeModule: Option.Option<RouteModule>,
+	routeModule: RouteModule,
 ) =>
 	Effect.gen(function* () {
-		console.log({ routeModule });
 		const request = yield* HttpServerRequest.HttpServerRequest;
 
-		let html: string = "";
-		let head: string = "";
-		let status = 404;
+		let body = "";
+		let head = "";
 
-		if (routeModule._tag === "Some") {
-			status = 200;
-			if (
-				"page" in routeModule.value &&
-				typeof routeModule.value.page === "function"
-			) {
-				let meta: Metadata | undefined;
+		if (routeModule) {
+			if ("page" in routeModule && routeModule.page) {
+				const pageRouteModule = yield* routeModule.page;
+				head = pageRouteModule.meta ? renderToString(pageRouteModule.meta) : "";
 
-				if (typeof routeModule.value.meta === "function") {
-					meta = yield* routeModule.value.meta(context);
-				} else {
-					meta = routeModule.value.meta;
-				}
-
-				head = meta
-					? renderToString(
-							<Fragment>
-								<title>{meta.title}</title>
-								<meta name="description" content={meta.description} />
-							</Fragment>,
-						)
-					: "";
-
-				const Page = yield* routeModule.value.page(context);
-				const stringOrAsync = renderToStringAsync(<Page />);
-
+				const stringOrAsync = renderToStringAsync(pageRouteModule.body);
 				if (typeof stringOrAsync === "string") {
-					html = stringOrAsync;
+					body = stringOrAsync;
 				} else {
-					html = yield* Effect.tryPromise(() => stringOrAsync);
+					body = yield* Effect.tryPromise(() => stringOrAsync);
 				}
 			} else {
+				const mod = routeModule as DataRouteModule; // todo give love
+
 				for (const method of allowedAPIMethods) {
 					if (
-						method in routeModule.value &&
-						routeModule.value[method] &&
+						method in routeModule &&
+						mod[method] &&
 						request.method === method
 					) {
-						return yield* routeModule.value[method](context);
+						return yield* mod[method](context);
 					}
 				}
 			}
+
+			return HttpServerResponse.html(
+				template
+					.replace(templateHeadToken, head)
+					.replace(templateBodyToken, body),
+			);
 		}
 
-		return HttpServerResponse.raw(
-			template
-				.replace(templateHeadToken, head ?? "")
-				.replace(templateBodyToken, html ?? "Not found"),
-			{ contentType: "text/html", status },
-		);
-	});
+		return yield* Effect.fail(new NotFoundError());
+	}).pipe(
+		Effect.catchTags({
+			NotFound: () => HttpServerResponse.text("Not found", { status: 404 }),
+			Redirect: (redirect: Redirect) =>
+				HttpServerResponse.redirect(redirect.location, {
+					status: redirect.status,
+				}),
+		}),
+	);

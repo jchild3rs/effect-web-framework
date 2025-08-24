@@ -1,6 +1,6 @@
 import { FileSystem } from "@effect/platform";
 import { NodeContext } from "@effect/platform-node";
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Option, Schema } from "effect";
 import { origin, routeDir } from "./config.ts";
 
 export class RouteEntries extends Context.Tag("RouteEntries")<
@@ -15,11 +15,8 @@ export const getRouteEntries = Effect.gen(function* () {
 
 	const files = yield* fs.readDirectory(routeDir, { recursive: true });
 
-	// const routeFiles = files.filter((file) => file.endsWith(".tsx"));
-
 	for (const routeFile of files.filter((f) => f.includes("."))) {
 		const route = `src/${routeFile}`;
-		console.log({ routeFile });
 		const routeId = route
 			.replace("src/", "")
 			.replace(".tsx", "")
@@ -64,6 +61,18 @@ function transformRoutePath(path: string): string {
 	return `/${transformedPath}`;
 }
 
+const URLPatternResultFromSelf = Schema.declare(
+	(input: unknown): input is URLPatternResult => {
+		return typeof input === "object" && input !== null && "pathname" in input;
+	},
+);
+
+const MatchedRoute = Schema.Struct({
+	entry: Schema.String,
+	result: URLPatternResultFromSelf,
+});
+export type MatchedRoute = typeof MatchedRoute.Type;
+
 export const matchRoute = (path: string) =>
 	Effect.gen(function* () {
 		const entries = yield* RouteEntries;
@@ -74,9 +83,9 @@ export const matchRoute = (path: string) =>
 			const result = pattern.exec(path, origin);
 			if (result) {
 				const entry = Object.values(entries)[i];
-				return { entry, result };
+				return Option.some(MatchedRoute.make({ entry, result }));
 			}
 		}
 
-		return null;
+		return Option.none();
 	});

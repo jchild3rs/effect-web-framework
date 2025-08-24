@@ -16,17 +16,25 @@ export class ViteDevServer extends Context.Tag("ViteDevServer")<
 export const ViteDevServerLive = Layer.effect(
 	ViteDevServer,
 	Effect.gen(function* () {
+		if (isProduction) {
+			return null as never;
+		}
+
 		const { createServer: createViteDevServer } = yield* Effect.tryPromise(
 			() => import("vite"),
 		);
 
-		return yield* Effect.tryPromise(() =>
+		const devServer = yield* Effect.tryPromise(() =>
 			createViteDevServer({
 				server: { middlewareMode: true },
 				appType: "custom",
 				base,
 			}),
 		);
+
+		yield* Effect.log("Vite dev server started");
+
+		return devServer;
 	}),
 );
 

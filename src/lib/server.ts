@@ -1,13 +1,18 @@
 import("urlpattern-polyfill");
 
 import { createServer } from "node:http";
-import { HttpRouter, HttpServer, HttpServerResponse } from "@effect/platform";
+import {
+	FetchHttpClient,
+	HttpRouter,
+	HttpServer,
+	HttpServerResponse,
+} from "@effect/platform";
 import {
 	NodeContext,
 	NodeHttpServer,
 	NodeRuntime,
 } from "@effect/platform-node";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Logger, LogLevel } from "effect";
 import { RouteEntriesLive } from "./bundle-entry-points.ts";
 import { port } from "./config.ts";
 import { ManifestLive } from "./manifest.ts";
@@ -41,6 +46,7 @@ const server = router.pipe(
 			});
 		}),
 	),
+	Logger.withMinimumLogLevel(LogLevel.Debug),
 	HttpServer.serve(),
 	HttpServer.withLogAddress,
 );
@@ -52,14 +58,15 @@ const ServerLive = Layer.mergeAll(
 	MiddlewareLive,
 	UuidLive,
 	ManifestLive,
+);
+
+const AppLive = Layer.mergeAll(
 	NodeHttpServer.layer(() => createServer(), { port }),
+	NodeContext.layer,
+	FetchHttpClient.layer,
+	NodeSdkLive,
 );
 
 NodeRuntime.runMain(
-	Layer.launch(
-		Layer.provide(server, ServerLive).pipe(
-			Layer.provide(NodeContext.layer),
-			Layer.provide(NodeSdkLive),
-		),
-	),
+	Layer.launch(Layer.provide(server, ServerLive).pipe(Layer.provide(AppLive))),
 );
