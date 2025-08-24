@@ -2,8 +2,6 @@ import "./style.css";
 import { type AnyComponent, hydrate } from "preact";
 
 async function mount(Comp: AnyComponent, elm: HTMLElement) {
-	if (elm.dataset.mounted === "true") return;
-
 	let props = {};
 
 	if (elm.dataset.props) {
@@ -35,10 +33,11 @@ async function hydrateIslands() {
 			if (!entry.isIntersecting) return;
 
 			if (island instanceof HTMLElement && island.dataset.file) {
-				void mount(
+				await mount(
 					(await import(`./islands/${island.dataset.file}.tsx`)).default,
 					island,
 				);
+				observer.disconnect();
 			}
 		});
 
