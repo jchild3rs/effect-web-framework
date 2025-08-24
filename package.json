@@ -5,9 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"postinstall": "npm run build",
-		"build": "npm run build:client && npm run build:server",
-		"build:client": "vite build",
-		"build:server": "vite build --config ./vite.server.config.ts",
+		"build": "vite build && vite build --ssr",
 		"check": "biome check --write",
 		"dev": "node src/lib/server.ts",
 		"format": "biome format --write",

@@ -43,7 +43,7 @@ export const routeHandler = Effect.gen(function* () {
 
 		routeModule = yield* loadModule<RouteModule>(serverRouteEntry.file);
 		handleRoute = yield* loadModule<typeof import("../entry-server.tsx")>(
-			"entry-server.js",
+			serverManifest["src/entry-server.tsx"].file,
 		).pipe(Effect.map((mod) => mod.handleRoute));
 	} else {
 		const viteDevServer = yield* ViteDevServer;
@@ -90,8 +90,7 @@ function loadModule<T>(file: string) {
 	return Effect.gen(function* () {
 		yield* Effect.logDebug(`loadModule(${file})`);
 		return yield* Effect.promise(
-			() =>
-				import(`../../dist/server/${file.replace(".js", "")}.js`) as Promise<T>,
+			() => import(`../../dist/server/${file}`) as Promise<T>,
 		);
 	}).pipe(
 		Effect.withSpan("load-module"),
