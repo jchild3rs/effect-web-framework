@@ -6,7 +6,7 @@ import {
 import { NodeHttpServerRequest } from "@effect/platform-node";
 import { Context, Effect, Layer } from "effect";
 import { base, isProduction } from "./config.ts";
-import { BuiltStaticAssets } from "./static-assets.ts";
+import { StaticAssets } from "./static-assets.ts";
 
 export class ViteDevServer extends Context.Tag("ViteDevServer")<
 	ViteDevServer,
@@ -64,7 +64,7 @@ export const viteStaticAssetsMiddleware = HttpMiddleware.make((app) =>
 		if (isProduction) {
 			const request = yield* HttpServerRequest.HttpServerRequest;
 
-			const assets = yield* BuiltStaticAssets;
+			const assets = yield* StaticAssets;
 
 			const matchedPath = assets.find((asset) =>
 				`/${asset}`.endsWith(request.url),

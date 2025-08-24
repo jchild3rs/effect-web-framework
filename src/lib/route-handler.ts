@@ -1,6 +1,6 @@
 import { HttpServerRequest, HttpServerResponse } from "@effect/platform";
-import { Data, Effect, Option, Schema } from "effect";
-import { matchRoute } from "./bundle-entry-points.ts";
+import { Effect, Option, Schema } from "effect";
+import { matchRoute } from "~/lib/match-route.ts";
 import { isProduction, routeDir } from "./config.ts";
 import { document } from "./document.ts";
 import {
@@ -12,21 +12,6 @@ import type { RouteModule } from "./types.ts";
 import { Uuid } from "./uuid.ts";
 import { ViteDevServer } from "./vite-dev-server.ts";
 
-export class NotFoundError extends Data.TaggedError("NotFound") {}
-
-export class Redirect extends Data.TaggedError("Redirect") {
-	public readonly location: string;
-	public readonly status: number = 302;
-
-	constructor(_location: string, _status?: number) {
-		super();
-		this.location = _location;
-		if (_status) {
-			this.status = _status;
-		}
-	}
-}
-
 export const routeHandler = Effect.gen(function* () {
 	const request = yield* HttpServerRequest.HttpServerRequest;
 	const matchedRoute = yield* matchRoute(request.url);
@@ -36,7 +21,7 @@ export const routeHandler = Effect.gen(function* () {
 	}
 
 	let template = yield* document({ isProduction });
-	let routeModule: RouteModule = {};
+	let routeModule: RouteModule;
 	let handleRoute: typeof import("../entry-server.tsx").handleRoute;
 
 	if (isProduction) {

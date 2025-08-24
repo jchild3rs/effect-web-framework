@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { Redirect } from "~/lib/route-handler";
+import { Redirect } from "~/lib/redirect.ts";
 
-export const page = Effect.gen(function* () {
+export const Page = Effect.gen(function* () {
 	return yield* Effect.fail(new Redirect("/blog/2")); // optional status arg `new Redirect('/', 302)`
 });

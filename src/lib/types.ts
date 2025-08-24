@@ -37,17 +37,6 @@ export type RouteDataFn = (
 	context: RouteContext,
 ) => HttpServerResponse.HttpServerResponse;
 
-// type test = Data.TaggedEnum<{
-// 	DataRoute: {
-// 		[P in (typeof allowedAPIMethods)[number]]?: RouteDataFn;
-// 	};
-// 	PageRoute: {
-// 		page?: Effect.Effect<Page, unknown, Locals>;
-// 	};
-// }>;
-//
-// export const { DataRoute, PageRoute } = Data.taggedEnum<test>();
-
 export type PageRouteModule = {
 	Page?: Effect.Effect<DocumentParts, unknown, Locals>;
 };

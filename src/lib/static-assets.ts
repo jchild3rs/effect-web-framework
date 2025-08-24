@@ -2,13 +2,13 @@ import { FileSystem } from "@effect/platform";
 import { Context, Effect, Layer } from "effect";
 import { isProduction } from "./config.ts";
 
-export class BuiltStaticAssets extends Context.Tag("BuiltStaticAssets")<
-	BuiltStaticAssets,
+export class StaticAssets extends Context.Tag("StaticAssets")<
+	StaticAssets,
 	string[]
 >() {}
 
 export const BuiltStaticAssetsLive = Layer.effect(
-	BuiltStaticAssets,
+	StaticAssets,
 	!isProduction
 		? Effect.succeed([])
 		: Effect.gen(function* () {

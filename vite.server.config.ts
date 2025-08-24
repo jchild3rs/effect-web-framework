@@ -13,16 +13,18 @@ import { origin } from "./src/lib/config";
 const bundleEntries = await Effect.runPromise(
 	bundleEntryPoints.pipe(
 		Effect.map((entries) =>
-			Object.entries(entries).reduce((acc, [key, value]) => {
-				acc[key] = value.path;
-				return acc;
-			}, {}),
+			Object.entries(entries).reduce<Record<string, string>>(
+				(acc, [key, value]) => {
+					acc[key] = value.path;
+					return acc;
+				},
+				{},
+			),
 		),
 		Effect.provide(RouteEntriesLive),
 		Effect.provide(NodeContext.layer),
 	),
 );
-console.log({ bundleEntries });
 
 // the origin you will be accessing via browser
 const ORIGIN = await Effect.runPromise(

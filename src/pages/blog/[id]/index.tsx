@@ -1,8 +1,8 @@
 import { Effect, Schema } from "effect";
 import { PostAPI } from "~/domain/post/api.ts";
 import { DocumentParts } from "~/lib/document.ts";
+import { NotFound } from "~/lib/not-found.ts";
 import { RouteContext } from "~/lib/route-context";
-import { NotFoundError } from "~/lib/route-handler.ts";
 
 const BlogPostParamSchema = Schema.Struct({ id: Schema.NonEmptyString });
 
@@ -16,7 +16,7 @@ export const Page = Effect.gen(function* () {
 	const response = yield* PostAPI.byId(params.id);
 
 	if (response.status === 404) {
-		return yield* Effect.fail(new NotFoundError());
+		return yield* Effect.fail(new NotFound());
 	}
 
 	return DocumentParts.make({

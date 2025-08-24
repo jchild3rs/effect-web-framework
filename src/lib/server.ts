@@ -1,5 +1,3 @@
-import("urlpattern-polyfill");
-
 import { createServer } from "node:http";
 import {
 	FetchHttpClient,

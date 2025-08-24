@@ -1,6 +1,6 @@
 import { HttpMiddleware, HttpServerRequest } from "@effect/platform";
 import { Context, Effect, Layer, Option } from "effect";
-import { matchRoute } from "../lib/bundle-entry-points.ts";
+import { matchRoute } from "~/lib/match-route.ts";
 import { Locals } from "../lib/locals.ts";
 import { Uuid } from "../lib/uuid.ts";
 

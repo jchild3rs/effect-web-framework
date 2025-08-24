@@ -1,5 +1,5 @@
 import { FileSystem } from "@effect/platform";
-import { Context, Effect, Layer, Option, Schema } from "effect";
+import { Context, Effect, Layer } from "effect";
 import { origin, routeDir } from "./config.ts";
 
 export class RouteEntries extends Context.Tag("RouteEntries")<
@@ -63,36 +63,3 @@ function transformRoutePath(path: string): string {
 
 	return `/${transformedPath}`;
 }
-
-// const URLPatternFromSelf = Schema.declare(
-// 	(input: unknown): input is URLPattern => {
-// 		return typeof input === "object" && input !== null && "pathname" in input;
-// 	},
-// );
-
-const URLPatternResultFromSelf = Schema.declare(
-	(input: unknown): input is URLPatternResult => {
-		return typeof input === "object" && input !== null && "pathname" in input;
-	},
-);
-
-const MatchedRoute = Schema.Struct({
-	entry: Schema.String,
-	result: URLPatternResultFromSelf,
-});
-export type MatchedRoute = typeof MatchedRoute.Type;
-
-export const matchRoute = (path: string) =>
-	Effect.gen(function* () {
-		const entries = Object.entries(yield* RouteEntries);
-
-		for (let i = 0; i < entries.length; i++) {
-			const [, entry] = entries[i];
-			const result = entry.pattern.exec(path, origin);
-			if (result) {
-				return Option.some(MatchedRoute.make({ entry: entry.path, result }));
-			}
-		}
-
-		return Option.none();
-	});
